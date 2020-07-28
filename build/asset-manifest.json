@@ -1,0 +1,19 @@
+{
+  "files": {
+    "main.js": "/rxjs-animation-demo/build/static/js/main.d74d4939.chunk.js",
+    "main.js.map": "/rxjs-animation-demo/build/static/js/main.d74d4939.chunk.js.map",
+    "runtime-main.js": "/rxjs-animation-demo/build/static/js/runtime-main.ac06c69a.js",
+    "runtime-main.js.map": "/rxjs-animation-demo/build/static/js/runtime-main.ac06c69a.js.map",
+    "static/js/2.73413834.chunk.js": "/rxjs-animation-demo/build/static/js/2.73413834.chunk.js",
+    "static/js/2.73413834.chunk.js.map": "/rxjs-animation-demo/build/static/js/2.73413834.chunk.js.map",
+    "index.html": "/rxjs-animation-demo/build/index.html",
+    "precache-manifest.29930b9801710a94b70e1cb24913610c.js": "/rxjs-animation-demo/build/precache-manifest.29930b9801710a94b70e1cb24913610c.js",
+    "service-worker.js": "/rxjs-animation-demo/build/service-worker.js",
+    "static/js/2.73413834.chunk.js.LICENSE.txt": "/rxjs-animation-demo/build/static/js/2.73413834.chunk.js.LICENSE.txt"
+  },
+  "entrypoints": [
+    "static/js/runtime-main.ac06c69a.js",
+    "static/js/2.73413834.chunk.js",
+    "static/js/main.d74d4939.chunk.js"
+  ]
+}
