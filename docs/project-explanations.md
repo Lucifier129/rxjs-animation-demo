@@ -1082,9 +1082,16 @@ Windows 11): `npm ci` installs cleanly, `npx tsc --noEmit` passes on the whole
 `ERR_OSSL_EVP_UNSUPPORTED` exactly as described above and succeeds with
 `NODE_OPTIONS=--openssl-legacy-provider`, printing only two pre-existing ESLint
 warnings about an unused `_` in the Vertical and Horizontal demos. The
-regenerated `build/` was discarded afterwards, so the committed build still
-reflects the original engine; run the build again to refresh it. `npm start`
-was not run.
+`build/` was then regenerated and committed so the GitHub Pages demo includes
+the fixes.
+
+The four demos were also exercised by hand in Chrome against `npm start`:
+drag and reorder in Vertical, Horizontal, Grid and Canvas; Grid mounted while
+the page was scrolled (the condition for the old offset bug); a press on empty
+canvas; and a resize repaint. No console errors or warnings appeared. A short
+recording of one drag per demo is in [`browser-test.gif`](./browser-test.gif):
+
+![One drag per demo: Vertical, Horizontal, Grid, Canvas](./browser-test.gif)
 
 ---
 
