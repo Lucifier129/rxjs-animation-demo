@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef } from "react";
 import { useColorList } from "../hooks/useColorList";
 import { MovableInfo } from "../rxjs-animation/Movable";
 import { StaticMovableList, Rect, Size } from "../rxjs-animation/MovableList";
-import { createDragable } from "../rxjs-animation/DOM";
+import { createDragable, getPageOffset } from "../rxjs-animation/DOM";
 
 const renderRect = (
   ctx: CanvasRenderingContext2D,
@@ -31,15 +31,9 @@ export function CanvasDemo() {
     let container = containerRef.current;
     let canvas = canvasRef.current;
     let ctx = canvas.getContext("2d");
-    let containerRect = container.getBoundingClientRect();
     let keyList = colorList.map((_, index) => index.toString());
 
     if (!ctx) return;
-
-    let offset = {
-      x: containerRect.x,
-      y: containerRect.y,
-    };
 
     let movableList = StaticMovableList({
       mode: "Grid",
@@ -47,7 +41,9 @@ export function CanvasDemo() {
       height: size.height,
       columnCount: 10,
       keyList,
-      offset,
+      // A getter: re-measured at every drag start and every hit-test, so
+      // scrolling and resizing never desynchronise the pointer from the layout.
+      offset: () => getPageOffset(container),
       animation: {
         disable: false,
       },
@@ -76,7 +72,7 @@ export function CanvasDemo() {
       renderRect(ctx, colorList[Number(item.key)], rect);
     };
 
-    let subscription = movableList.state$.subscribe((list) => {
+    let render = (list: Item[]) => {
       let movingItem: Item | null = null;
 
       let animatingItems: Item[] = [];
@@ -102,22 +98,43 @@ export function CanvasDemo() {
       if (movingItem && ctx) {
         renderItem(movingItem);
       }
+    };
+
+    let latestList: Item[] = [];
+
+    let subscription = movableList.state$.subscribe((list) => {
+      latestList = list;
+      render(list);
     });
 
-    let currentKey = "";
+    // Resizing a canvas clears it, so keep the last list and repaint.
+    let handleResize = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight - 100;
+      render(latestList);
+    };
+
+    window.addEventListener("resize", handleResize, false);
+
+    // null between drags: a press on empty canvas must not reuse the key of
+    // the previous drag.
+    let currentKey: string | null = null;
 
     let handler = createDragable(canvas, {
       onStart(x, y) {
         let activeInfo = movableList.actions.getActiveInfo(x, y);
-        if (!activeInfo) return;
-        currentKey = activeInfo.key;
+        currentKey = activeInfo ? activeInfo.key : null;
+        if (currentKey === null) return;
         movableList.actions.start(currentKey, x, y);
       },
       onMove(x, y) {
+        if (currentKey === null) return;
         movableList.actions.move(currentKey, x, y);
       },
       onEnd(x, y) {
+        if (currentKey === null) return;
         movableList.actions.end(currentKey, x, y);
+        currentKey = null;
       },
     });
 
@@ -126,6 +143,7 @@ export function CanvasDemo() {
     return () => {
       subscription.unsubscribe();
       handler.unlisten();
+      window.removeEventListener("resize", handleResize, false);
     };
   }, [colorList, size, containerRef]);
 

@@ -34,13 +34,20 @@ export type Offset = {
   y: number;
 };
 
+/**
+ * The container's offset in page coordinates, either fixed or as a getter.
+ * A getter is re-evaluated at the start of every drag and on every
+ * getActiveInfo() call, so scrolling, resizing and layout shifts are picked up.
+ */
+export type OffsetGetter = () => Offset;
+
 export type StaticMovableListOptions =
   | {
       mode: "Horizontal";
       widthList: number[];
       keyList: string[];
       spacing?: number;
-      offset?: Offset;
+      offset?: Offset | OffsetGetter;
       animation?: AnimationOptions;
       useExchanged?: boolean;
     }
@@ -48,7 +55,7 @@ export type StaticMovableListOptions =
       mode: "Vertical";
       heightList: number[];
       keyList: string[];
-      offset?: Offset;
+      offset?: Offset | OffsetGetter;
       spacing?: number;
       animation?: AnimationOptions;
       useExchanged?: boolean;
@@ -59,7 +66,7 @@ export type StaticMovableListOptions =
       height: number;
       keyList: string[];
       columnCount: number;
-      offset?: Offset;
+      offset?: Offset | OffsetGetter;
       margin?: Margin;
       animation?: AnimationOptions;
       useExchanged?: boolean;
@@ -69,7 +76,7 @@ export type StaticMovableListOptions =
       sizeList: Size[];
       keyList: string[];
       layout: LayoutFn;
-      offset?: Offset;
+      offset?: Offset | OffsetGetter;
       animation?: AnimationOptions;
       useExchanged?: boolean;
     };
@@ -326,7 +333,10 @@ const layoutByPosition = (
     newSizeList[activeIndex] = enteredSize;
   } else {
     if (activeIndex > enteredIndex) {
-      let targetIndex = Math.max(enteredIndex - 1, 0);
+      // The active item is removed first, which leaves the indices below
+      // activeIndex untouched, so it is inserted exactly at the entered slot
+      // (symmetric with the forward branch below).
+      let targetIndex = enteredIndex;
       newKeyList.splice(activeIndex, 1);
       newSizeList.splice(activeIndex, 1);
       newKeyList.splice(targetIndex, 0, activeKey);
@@ -362,6 +372,9 @@ const createMoverMap = (keyList: string[], rectList: Rect[]): MoverMap => {
       x: rect.x,
       y: rect.y,
     };
+    if (moverMap[key]) {
+      throw new Error(`Duplicate key in keyList: ${key}`);
+    }
     let mover = Movable(position);
     moverMap[key] = mover;
   }
@@ -391,11 +404,18 @@ export const StaticMovableList = (options: StaticMovableListOptions) => {
     ...options.animation,
   };
 
-  let offset: Offset = {
-    x: 0,
-    y: 0,
-    ...options.offset,
+  let resolveOffset = (): Offset => {
+    let value =
+      typeof options.offset === "function" ? options.offset() : options.offset;
+    return {
+      x: 0,
+      y: 0,
+      ...value,
+    };
   };
+
+  // Refreshed at the start of every drag, see start() and getActiveInfo().
+  let offset: Offset = resolveOffset();
 
   let keyList = [...originKeyList];
 
@@ -403,7 +423,9 @@ export const StaticMovableList = (options: StaticMovableListOptions) => {
 
   let moverMap = createMoverMap(keyList, rectList);
 
-  let moverList = Object.values(moverMap);
+  // Keep movers in keyList order. Object.values() would put integer-like keys
+  // ("10", "2", ...) in numeric order and break the index <-> key mapping.
+  let moverList = originKeyList.map((key) => moverMap[key]);
 
   let getMover = (key: string) => {
     let mover = moverMap[key];
@@ -414,6 +436,7 @@ export const StaticMovableList = (options: StaticMovableListOptions) => {
   let start = (key: string, x: number, y: number) => {
     let mover = getMover(key);
     if (!mover) return;
+    offset = resolveOffset();
     mover.actions.start(x, y);
   };
 
@@ -428,7 +451,17 @@ export const StaticMovableList = (options: StaticMovableListOptions) => {
     if (!mover) return;
     let rect = rectList[keyList.indexOf(key)];
     mover.actions.end(x, y);
-    mover.actions.animateTo(rect.x, rect.y);
+    // Snap into the slot with the same animation options as the reflow.
+    if (animationOptions.disable) {
+      mover.actions.moveTo(rect.x, rect.y);
+    } else {
+      mover.actions.animateTo(
+        rect.x,
+        rect.y,
+        animationOptions.duration,
+        animationOptions.easing
+      );
+    }
   };
 
   let animateTo = (
@@ -457,6 +490,8 @@ export const StaticMovableList = (options: StaticMovableListOptions) => {
 
   let getActiveInfo = (x: number, y: number) => {
     if (!latestMovableInfoList.length) return null;
+
+    offset = resolveOffset();
 
     let targetPosition = {
       x: x - offset.x,
