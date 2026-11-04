@@ -8,6 +8,7 @@ import {
   switchMap,
   startWith,
   shareReplay,
+  share,
   publish,
   refCount,
 } from "rxjs/operators";
@@ -70,8 +71,12 @@ export const Movable = (initialPosition: MovablePosition = { x: 0, y: 0 }) => {
   let moveTo$ = moveToSubject.asObservable();
   let animateTo$ = animateToSubject.asObservable();
 
+  // share() so the tap runs once per start(), however many pipelines are
+  // subscribed (the drag pipeline always is; a running tween is too, through
+  // its takeUntil).
   let starting$ = startingSubject.pipe(
-    tap<MovablePosition>(movementStartSubject)
+    tap<MovablePosition>(movementStartSubject),
+    share()
   );
   let moving$ = movingSubject.asObservable();
   let ending$ = endingSubject.pipe(tap<MovablePosition>(movementEndSubject));
@@ -124,7 +129,6 @@ export const Movable = (initialPosition: MovablePosition = { x: 0, y: 0 }) => {
       let isStart = false;
 
       return Duration(options.duration).pipe(
-        takeUntil(starting$),
         map(options.easing),
         map((currentDuration) => {
           let newPosition: MovablePosition = {
@@ -140,7 +144,11 @@ export const Movable = (initialPosition: MovablePosition = { x: 0, y: 0 }) => {
             animationStartSubject.next();
           },
           complete: () => animationEndSubject.next(),
-        })
+        }),
+        // After the tap, so a drag that interrupts the tween unsubscribes it
+        // rather than completing it: AnimationEnd only fires when the tween
+        // actually reached its target.
+        takeUntil(starting$)
       );
     }),
     tap<MovablePosition>((position) => {
@@ -169,22 +177,25 @@ export const Movable = (initialPosition: MovablePosition = { x: 0, y: 0 }) => {
   );
 
   // actions
+  // The interaction position is updated *before* the gesture subject fires,
+  // so the state emitted for a gesture carries the current pointer position
+  // rather than the previous one.
   let start = (x: number, y: number) => {
     let position = { x, y };
-    startingSubject.next(position);
     interactionPositionSubject.next(position);
+    startingSubject.next(position);
   };
 
   let move = (x: number, y: number) => {
     let position = { x, y };
-    movingSubject.next(position);
     interactionPositionSubject.next(position);
+    movingSubject.next(position);
   };
 
   let end = (x: number = 0, y: number = 0) => {
     let position = { x, y };
-    endingSubject.next(position);
     interactionPositionSubject.next(null);
+    endingSubject.next(position);
   };
 
   let moveTo = (x: number, y: number) => {

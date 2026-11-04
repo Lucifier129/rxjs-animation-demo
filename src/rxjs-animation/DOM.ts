@@ -70,3 +70,21 @@ export const createDragable = (
     unlisten,
   };
 };
+
+export type PageOffset = {
+  x: number;
+  y: number;
+};
+
+/**
+ * Position of an element's top-left corner in page (document) coordinates,
+ * i.e. the same coordinate system as MouseEvent.pageX / pageY.
+ * getBoundingClientRect() alone is viewport-relative and ignores scrolling.
+ */
+export const getPageOffset = (elem: HTMLElement): PageOffset => {
+  let rect = elem.getBoundingClientRect();
+  return {
+    x: rect.left + window.pageXOffset,
+    y: rect.top + window.pageYOffset,
+  };
+};

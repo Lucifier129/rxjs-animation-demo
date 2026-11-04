@@ -7,7 +7,7 @@ export function easeOutQuad(t: number) {
 }
 
 export function easeInOutQuad(t: number) {
-  return (t *= 2) < 1 ? t ** 3 / 2 : ((t -= 2) * t * t + 2) / 2;
+  return (t *= 2) < 1 ? (t * t) / 2 : -((t -= 1) * (t - 2) - 1) / 2;
 }
 
 export function easeInCubic(t: number) {
@@ -55,7 +55,7 @@ export function easeOutSine(t: number) {
 }
 
 export function easeInOutSine(t: number) {
-  return (Math.cos(Math.PI * t) - 1) / 2;
+  return -(Math.cos(Math.PI * t) - 1) / 2;
 }
 
 export function easeInExpo(t: number) {
@@ -126,7 +126,7 @@ export function easeInOutElastic(t: number) {
   t -= 1;
   return (
     (Math.pow(2, x * 10 * t) * Math.sin(((t - ev3) * DOUBLE_PI) / p3)) /
-      (x * 2) +
+      (x * -2) +
     m
   );
 }
@@ -175,7 +175,7 @@ export function easeOutBounce(t: number) {
 
 export function easeInOutBounce(t: number) {
   if (t < 1 / 2) return easeInBounce(t * 2) / 2;
-  return easeOutBounce(t) / 2 + 0.5;
+  return easeOutBounce(t * 2 - 1) / 2 + 0.5;
 }
 
 /*

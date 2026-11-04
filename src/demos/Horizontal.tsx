@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef } from "react";
 import { useColorList } from "../hooks/useColorList";
 import { StaticMovableList } from "../rxjs-animation/MovableList";
-import { createDragable } from "../rxjs-animation/DOM";
+import { createDragable, getPageOffset } from "../rxjs-animation/DOM";
 
 export function HorizontalDemo() {
   let containerRef = useRef<HTMLDivElement>(null);
@@ -16,13 +16,11 @@ export function HorizontalDemo() {
     if (!containerRef.current) return;
 
     let container = containerRef.current;
-    let containerRect = container.getBoundingClientRect();
     let keyList = widthList.map((_, index) => index.toString());
 
-    let offset = {
-      x: containerRect.x,
-      y: containerRect.y,
-    };
+    // A getter: re-measured at every drag start, so scrolling and resizing
+    // never desynchronise the pointer from the layout.
+    let offset = () => getPageOffset(container);
 
     let movableList = StaticMovableList({
       mode: "Horizontal",
